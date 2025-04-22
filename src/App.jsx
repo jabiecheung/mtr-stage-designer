@@ -41,7 +41,7 @@ export default function StageEditor() {
         localStorage.setItem("onoffArray", JSON.stringify(onoffArray));
     }, [rows, cols, presetArray, bgArray, onoffArray]);
 
-    const totalPresent = bgArray.filter((v) => v === 4).length;
+    const totalPresent = bgArray.filter((v) => v === 3).length;
     const totalBalloon = bgArray.filter((v) => v === 1 || v === 2).length;
 
     const index = (r, c) => (rows - 1 - r) * cols + c;
@@ -106,91 +106,67 @@ export default function StageEditor() {
 
     const renderTextarea = (label, data, type) => (
         <div className="w-full mb-4 relative">
-          <label className="block font-bold mb-1">{label}</label>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(
-                `[\n${Array.from({ length: rows }, (_, r) =>
-                  data
-                    .slice(r * cols, (r + 1) * cols)
-                    .join(", ")
-                ).join(",\n")}\n]`
-              );
-              setCopiedType(type);
-              setTimeout(() => setCopiedType(null), 3000);
-            }}
-            className="absolute top-1 right-1 text-xs bg-gray-200 border border-gray-300 px-2 py-0.5 rounded hover:bg-gray-300"
-          >
-            {copiedType === type ? "Copied" : "Copy"}
-          </button>
-          <textarea
-            className="w-full h-48 border p-2 rounded text-sm"
-            value={`[\n${Array.from({ length: rows }, (_, r) =>
-              data
-                .slice(r * cols, (r + 1) * cols)
-                .join(", ")
-            ).join(",\n")}\n]`}
-            onChange={(e) => handleTextareaChange(type, e.target.value)}
-          />
+            <label className="block font-bold mb-1">{label}</label>
+            <button
+                onClick={() => {
+                    navigator.clipboard.writeText(
+                        `[\n${Array.from({ length: rows }, (_, r) =>
+                            data.slice(r * cols, (r + 1) * cols).join(", ")
+                        ).join(",\n")}\n]`
+                    );
+                    setCopiedType(type);
+                    setTimeout(() => setCopiedType(null), 3000);
+                }}
+                className="absolute top-1 right-1 text-xs bg-gray-200 border border-gray-300 px-2 py-0.5 rounded hover:bg-gray-300"
+            >
+                {copiedType === type ? "Copied" : "Copy"}
+            </button>
+            <textarea
+                className="w-full h-48 border p-2 rounded text-sm"
+                value={`[\n${Array.from({ length: rows }, (_, r) =>
+                    data.slice(r * cols, (r + 1) * cols).join(", ")
+                ).join(",\n")}\n]`}
+                onChange={(e) => handleTextareaChange(type, e.target.value)}
+            />
         </div>
     );
+
+    const presetIcon = (i) => {
+        return (
+            <div
+                key={`preset-${i}`}
+                className="cursor-pointer"
+                style={{
+                    border:
+                        selectedTool === "preset" && selectedValue === i
+                            ? "2px solid red"
+                            : "1px solid #ccc",
+                }}
+            >
+                <img
+                    src={`${import.meta.env.BASE_URL}assets/preset_${i}.png`}
+                    className="preset-toolbar-icon"
+                    data-type="preset"
+                    data-value={i}
+                    draggable
+                    onDragStart={handleDragStart}
+                    onClick={() => {
+                        setSelectedTool("preset");
+                        setSelectedValue(i);
+                    }}
+                />
+            </div>
+        );
+    };
 
     const renderToolbars = () => (
         <div className="space-y-2 mb-4">
             <div className="font-bold">Presets</div>
             <div className="flex gap-2 flex-wrap">
-                {[...Array(6)].map((_, i) => (
-                    <div
-                        key={`preset-${i}`}
-                        className="cursor-pointer"
-                        style={{
-                            border:
-                                selectedTool === "preset" && selectedValue === i
-                                    ? "2px solid red"
-                                    : "1px solid #ccc",
-                        }}
-                    >
-                        <img
-                            src={`/assets/preset_${i}.png`}
-                            className="preset-toolbar-icon"
-                            data-type="preset"
-                            data-value={i}
-                            draggable
-                            onDragStart={handleDragStart}
-                            onClick={() => {
-                                setSelectedTool("preset");
-                                setSelectedValue(i);
-                            }}
-                        />
-                    </div>
-                ))}
+                {[...Array(6)].map((_, i) => presetIcon(i))}
             </div>
             <div className="flex gap-2 flex-wrap">
-                {[6, 7, 8, 9, 10, 11].map((i) => (
-                    <div
-                        key={`preset-${i}`}
-                        className="cursor-pointer"
-                        style={{
-                            border:
-                                selectedTool === "preset" && selectedValue === i
-                                    ? "2px solid red"
-                                    : "1px solid #ccc",
-                        }}
-                    >
-                        <img
-                            src={`/assets/preset_${i}.png`}
-                            className="preset-toolbar-icon"
-                            data-type="preset"
-                            data-value={i}
-                            draggable
-                            onDragStart={handleDragStart}
-                            onClick={() => {
-                                setSelectedTool("preset");
-                                setSelectedValue(i);
-                            }}
-                        />
-                    </div>
-                ))}
+                {[6, 7, 8, 9, 10, 11].map((i) => presetIcon(i))}
             </div>
             <div className="font-bold">Backgrounds</div>
             <div className="flex gap-2 flex-wrap">
@@ -206,7 +182,9 @@ export default function StageEditor() {
                         }}
                     >
                         <img
-                            src={`/assets/bg_${i}.png`}
+                            src={`${
+                                import.meta.env.BASE_URL
+                            }assets/bg_${i}.png`}
                             className="bg-toolbar-icon"
                             data-type="bg"
                             data-value={i}
@@ -351,13 +329,17 @@ export default function StageEditor() {
                                         <div className="cell-content">
                                             {bg !== 0 && (
                                                 <img
-                                                    src={`/assets/bg_${bg}.png`}
+                                                    src={`${
+                                                        import.meta.env.BASE_URL
+                                                    }assets/bg_${bg}.png`}
                                                     className="bg-icon"
                                                 />
                                             )}
                                             {!!onoff && bg !== 4 && (
                                                 <img
-                                                    src={`/assets/preset_${preset}.png`}
+                                                    src={`${
+                                                        import.meta.env.BASE_URL
+                                                    }assets/preset_${preset}.png`}
                                                     className="preset-icon"
                                                 />
                                             )}
@@ -401,7 +383,7 @@ export default function StageEditor() {
                         }}
                     >
                         <img
-                            src={`/assets/bg_3.png`}
+                            src={`${import.meta.env.BASE_URL}assets/bg_3.png`}
                             style={{ width: "36px", display: "inline-block" }}
                         />{" "}
                         : {totalPresent}
@@ -417,7 +399,7 @@ export default function StageEditor() {
                         }}
                     >
                         <img
-                            src={`/assets/bg_2.png`}
+                            src={`${import.meta.env.BASE_URL}assets/bg_2.png`}
                             style={{ width: "36px", display: "inline-block" }}
                         />{" "}
                         : {totalBalloon}
