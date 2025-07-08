@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Sidebar from "./Sidebar";
 
 const DEFAULT_ROWS = 8;
 const DEFAULT_COLS = 8;
@@ -7,42 +8,282 @@ const createDefaultArray = (rows, cols, defaultValue) =>
     Array(rows * cols).fill(defaultValue);
 
 export default function StageEditor() {
-    const getStored = (key, fallback) => {
-        const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : fallback;
+    const getStoredData = () => {
+        const raw = localStorage.getItem("stageEditorData");
+        return raw ? JSON.parse(raw) : {};
     };
 
-    const [rows, setRows] = useState(() => getStored("rows", DEFAULT_ROWS));
-    const [cols, setCols] = useState(() => getStored("cols", DEFAULT_COLS));
-    const [presetArray, setPresetArray] = useState(() =>
-        getStored(
-            "presetArray",
-            createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 0)
-        )
-    );
-    const [bgArray, setBgArray] = useState(() =>
-        getStored("bgArray", createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 0))
-    );
-    const [onoffArray, setOnoffArray] = useState(() =>
-        getStored(
-            "onoffArray",
-            createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 1)
-        )
-    );
+    const stored = getStoredData();
+
     const [selectedTool, setSelectedTool] = useState("preset");
     const [selectedValue, setSelectedValue] = useState(0);
     const [copiedType, setCopiedType] = useState(null);
 
-    useEffect(() => {
-        localStorage.setItem("rows", JSON.stringify(rows));
-        localStorage.setItem("cols", JSON.stringify(cols));
-        localStorage.setItem("presetArray", JSON.stringify(presetArray));
-        localStorage.setItem("bgArray", JSON.stringify(bgArray));
-        localStorage.setItem("onoffArray", JSON.stringify(onoffArray));
-    }, [rows, cols, presetArray, bgArray, onoffArray]);
+    const [currentStageID, setCurrentStageID] = useState(null);
+
+    const [nextStageID, setNextStageID] = useState(() => {
+        const raw = localStorage.getItem("savedStages");
+        const stages = raw ? JSON.parse(raw) : [];
+        const maxID = stages.reduce((max, s) => Math.max(max, s.id || 0), 0);
+        return maxID + 1;
+    });
+
+    const [savedStages, setSavedStages] = useState(() => {
+        const raw = localStorage.getItem("savedStages");
+        return raw ? JSON.parse(raw) : [];
+    });
+
+    const saveStageToStorage = () => {
+        const editorState = {
+            id: currentStageID,
+            rows,
+            cols,
+            presetArray,
+            bgArray,
+            onoffArray,
+            presetSlug,
+            stageNum,
+            difficulty,
+            move,
+            requirementType1,
+            requirementAmount1,
+            requirementType2,
+            requirementAmount2,
+            requirementType3,
+            requirementAmount3,
+        };
+
+        if (!presetSlug || !stageNum) {
+            alert("Please enter the slug and stage #");
+            return;
+        }
+
+        const existing = JSON.parse(
+            localStorage.getItem("savedStages") || "[]"
+        );
+        const updated = existing.filter((s) => s.id !== currentStageID);
+        updated.push(editorState);
+        localStorage.setItem("savedStages", JSON.stringify(updated));
+        setSavedStages(updated);
+    };
+
+    const createNewPreset = () => {
+        setRows(DEFAULT_ROWS);
+        setCols(DEFAULT_COLS);
+        setPresetArray(createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 0));
+        setBgArray(createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 0));
+        setOnoffArray(createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 1));
+        setPresetSlug("");
+        setStageNum("");
+        setDifficulty("Tutorial");
+        setMove(20);
+        setCurrentStageID(nextStageID);
+        setNextStageID(nextStageID + 1);
+        setRequirementType1("");
+        setRequirementAmount1("");
+        setRequirementType2("");
+        setRequirementAmount2("");
+        setRequirementType3("");
+        setRequirementAmount3("");
+    };
+
+    const loadStage = (stage) => {
+        setRows(stage.rows);
+        setCols(stage.cols);
+        setPresetArray(stage.presetArray);
+        setBgArray(stage.bgArray);
+        setOnoffArray(stage.onoffArray);
+        setPresetSlug(stage.presetSlug);
+        setStageNum(stage.stageNum);
+        setDifficulty(stage.difficulty);
+        setMove(stage.move);
+        setCurrentStageID(stage.id);
+        setRequirementType1(stage.requirementType1 ?? "");
+        setRequirementAmount1(stage.requirementAmount1 ?? "");
+        setRequirementType2(stage.requirementType2 ?? "");
+        setRequirementAmount2(stage.requirementAmount2 ?? "");
+        setRequirementType3(stage.requirementType3 ?? "");
+        setRequirementAmount3(stage.requirementAmount3 ?? "");
+    };
+
+    const deleteStage = (targetStageNum) => {
+        const updated = savedStages.filter(
+            (s) => s.stageNum !== targetStageNum
+        );
+        localStorage.setItem("savedStages", JSON.stringify(updated));
+        setSavedStages(updated);
+    };
+
+    const [rows, setRows] = useState(stored.rows ?? DEFAULT_ROWS);
+    const [cols, setCols] = useState(stored.cols ?? DEFAULT_COLS);
+    const [presetArray, setPresetArray] = useState(
+        stored.presetArray ?? createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 0)
+    );
+    const [bgArray, setBgArray] = useState(
+        stored.bgArray ?? createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 0)
+    );
+    const [onoffArray, setOnoffArray] = useState(
+        stored.onoffArray ?? createDefaultArray(DEFAULT_ROWS, DEFAULT_COLS, 1)
+    );
+    const [presetSlug, setPresetSlug] = useState(stored.presetSlug ?? "");
+    const [stageNum, setStageNum] = useState(stored.stageNum ?? "");
+    const [difficulty, setDifficulty] = useState(
+        stored.difficulty ?? "Tutorial"
+    );
+    const [move, setMove] = useState(stored.move ?? 20);
+    const [requirementType1, setRequirementType1] = useState(
+        stored.requirementType1 ?? ""
+    );
+    const [requirementAmount1, setRequirementAmount1] = useState(
+        stored.requirementAmount1 ?? ""
+    );
+    const [requirementType2, setRequirementType2] = useState(
+        stored.requirementType2 ?? ""
+    );
+    const [requirementAmount2, setRequirementAmount2] = useState(
+        stored.requirementAmount2 ?? ""
+    );
+    const [requirementType3, setRequirementType3] = useState(
+        stored.requirementType3 ?? ""
+    );
+    const [requirementAmount3, setRequirementAmount3] = useState(
+        stored.requirementAmount3 ?? ""
+    );
 
     const totalPresent = bgArray.filter((v) => v === 3).length;
     const totalBalloon = bgArray.filter((v) => v === 1 || v === 2).length;
+    const totalTrain = presetArray.filter((v) => v === 11).length;
+
+    useEffect(() => {
+        const editorState = {
+            rows,
+            cols,
+            presetArray,
+            bgArray,
+            onoffArray,
+            presetSlug,
+            stageNum,
+            difficulty,
+            move,
+            requirementType1,
+            requirementAmount1,
+            requirementType2,
+            requirementAmount2,
+            requirementType3,
+            requirementAmount3,
+        };
+        localStorage.setItem("stageEditorData", JSON.stringify(editorState));
+    }, [
+        rows,
+        cols,
+        presetArray,
+        bgArray,
+        onoffArray,
+        presetSlug,
+        stageNum,
+        difficulty,
+        move,
+        requirementType1,
+        requirementAmount1,
+        requirementType2,
+        requirementAmount2,
+        requirementType3,
+        requirementAmount3,
+    ]);
+
+    useEffect(() => {
+        if (currentStageID == null) return;
+
+        const editorState = {
+            id: currentStageID,
+            rows,
+            cols,
+            presetArray,
+            bgArray,
+            onoffArray,
+            presetSlug,
+            stageNum,
+            difficulty,
+            move,
+            requirementType1,
+            requirementAmount1,
+            requirementType2,
+            requirementAmount2,
+            requirementType3,
+            requirementAmount3,
+        };
+
+        const existing = JSON.parse(
+            localStorage.getItem("savedStages") || "[]"
+        );
+        const updated = existing.filter((s) => s.id !== currentStageID);
+        updated.push(editorState);
+        localStorage.setItem("savedStages", JSON.stringify(updated));
+        setSavedStages(updated);
+    }, [
+        rows,
+        cols,
+        presetArray,
+        bgArray,
+        onoffArray,
+        presetSlug,
+        stageNum,
+        difficulty,
+        move,
+        currentStageID,
+        requirementType1,
+        requirementAmount1,
+        requirementType2,
+        requirementAmount2,
+        requirementType3,
+        requirementAmount3,
+    ]);
+
+    useEffect(() => {
+        const slots = [
+            {
+                type: requirementType1,
+                setType: setRequirementType1,
+                setAmt: setRequirementAmount1,
+            },
+            {
+                type: requirementType2,
+                setType: setRequirementType2,
+                setAmt: setRequirementAmount2,
+            },
+            {
+                type: requirementType3,
+                setType: setRequirementType3,
+                setAmt: setRequirementAmount3,
+            },
+        ];
+
+        const updateOrClearReq = (targetType, amount) => {
+            const existingSlot = slots.find((s) => s.type === targetType);
+            if (amount > 0) {
+                if (existingSlot) {
+                    existingSlot.setAmt(amount);
+                } else {
+                    const emptySlot = slots.find((s) => s.type === "");
+                    if (emptySlot) {
+                        emptySlot.setType(targetType);
+                        emptySlot.setAmt(amount);
+                    } else {
+                        alert(`no more requirement slot for ${targetType}`);
+                    }
+                }
+            } else {
+                if (existingSlot) {
+                    existingSlot.setType("");
+                    existingSlot.setAmt("");
+                }
+            }
+        };
+
+        updateOrClearReq("gift", totalPresent);
+        updateOrClearReq("balloon", totalBalloon);
+        updateOrClearReq("smile", totalTrain);
+    }, [totalPresent, totalBalloon, totalTrain]);
 
     const index = (r, c) => (rows - 1 - r) * cols + c;
 
@@ -101,6 +342,7 @@ export default function StageEditor() {
             if (type === "onoff") setOnoffArray(parsed);
         } catch (e) {
             console.error("Invalid JSON", e);
+            alert("Invalid JSON");
         }
     };
 
@@ -117,7 +359,7 @@ export default function StageEditor() {
                     setCopiedType(type);
                     setTimeout(() => setCopiedType(null), 3000);
                 }}
-                className="absolute top-1 right-1 text-xs bg-gray-200 border border-gray-300 px-2 py-0.5 rounded hover:bg-gray-300"
+                className="absolute top-0 right-0 text-md bg-gray-200 border border-gray-300 px-5 py-1 rounded hover:bg-gray-300"
             >
                 {copiedType === type ? "Copied" : "Copy"}
             </button>
@@ -129,6 +371,172 @@ export default function StageEditor() {
                 onChange={(e) => handleTextareaChange(type, e.target.value)}
             />
         </div>
+    );
+
+    const handleDownloadPresetCSV = () => {
+        const headers = [
+            "sourceGameStagePresetSlug",
+            "newSlugPrefix",
+            "newSlug",
+            "requirementType1",
+            "requirementAmount1",
+            "requirementType2",
+            "requirementAmount2",
+            "requirementType3",
+            "requirementAmount3",
+            "boardRow",
+            "boardColumn",
+            "preset",
+            "bg",
+            "boardAvailable",
+            "train",
+        ];
+        const rowsList = [];
+
+        // Sort savedStages by id ascending before looping
+        [...savedStages]
+            .sort((a, b) => a.id - b.id)
+            .forEach((stage) => {
+                const totalPresent = stage.bgArray.filter(
+                    (v) => v === 3
+                ).length;
+                const totalBalloon = stage.bgArray.filter(
+                    (v) => v === 1 || v === 2
+                ).length;
+                const totalTrain = stage.presetArray.filter(
+                    (v) => v === 11
+                ).length;
+
+                const reqType1 = stage.requirementType1 ?? "";
+                const reqAmt1 = stage.requirementAmount1 ?? "";
+                const reqType2 = stage.requirementType2 ?? "";
+                const reqAmt2 = stage.requirementAmount2 ?? "";
+                const reqType3 = stage.requirementType3 ?? "";
+                const reqAmt3 = stage.requirementAmount3 ?? "";
+
+                // Calculate hasTrain field before push
+                const hasTrain = stage.presetArray.includes(11) ? true : null;
+
+                rowsList.push([
+                    "",
+                    "",
+                    stage.presetSlug,
+                    reqType1,
+                    reqAmt1,
+                    reqType2,
+                    reqAmt2,
+                    reqType3,
+                    reqAmt3,
+                    stage.rows,
+                    stage.cols,
+                    `"${JSON.stringify(stage.presetArray).replace(
+                        /"/g,
+                        '""'
+                    )}"`,
+                    `"${JSON.stringify(stage.bgArray).replace(/"/g, '""')}"`,
+                    `"${JSON.stringify(stage.onoffArray).replace(/"/g, '""')}"`,
+                    hasTrain,
+                ]);
+            });
+
+        const csvContent = [headers, ...rowsList]
+            .map((e) => e.join(","))
+            .join("\n");
+
+        const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "preset.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const downloadPresetCSVButton = () => (
+        <button
+            onClick={handleDownloadPresetCSV}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+            Download Preset CSV
+        </button>
+    );
+
+    const handleDownloadStageCSV = () => {
+        const headers = [
+            "stageNum",
+            "gameStagePresetSlug",
+            "slug",
+            "titleZh",
+            "titleEn",
+            "position",
+            "difficulty",
+            "move",
+        ];
+        const rowsList = [];
+
+        [...savedStages]
+            .sort((a, b) => a.id - b.id)
+            .forEach((stage) => {
+                rowsList.push([
+                    stage.stageNum,
+                    stage.presetSlug,
+                    stage.presetSlug,
+                    null,
+                    null,
+                    null,
+                    stage.difficulty,
+                    stage.move,
+                ]);
+            });
+
+        const csvContent = [headers, ...rowsList]
+            .map((e) => e.join(","))
+            .join("\n");
+
+        const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "stage.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const downloadStageCSVButton = () => (
+        <button
+            onClick={handleDownloadStageCSV}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+            Download Stage CSV
+        </button>
+    );
+
+    // updatePreset
+
+    const savePreset = () => (
+        <button
+            onClick={saveStageToStorage}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+            Save Preset
+        </button>
+    );
+
+    const createNewPresetButton = () => (
+        <button
+            onClick={createNewPreset}
+            className="mt-4 px-4 py-2 bg-green-500 text-white rounded"
+        >
+            Create New Preset
+        </button>
     );
 
     const presetIcon = (i) => {
@@ -233,179 +641,404 @@ export default function StageEditor() {
         </div>
     );
 
-    return (
+    const textInput = (label, value, onChange) => (
         <>
-            <div className="flex p-4 space-x-4">
-                <div className="w-1/3">
-                    <>
-                        <div className="flex gap-4 mb-4">
-                            <div>
-                                <label className="block text-sm font-medium">
-                                    Rows
-                                </label>
-                                <input
-                                    type="number"
-                                    min={6}
-                                    max={9}
-                                    value={rows}
-                                    onChange={(e) => {
-                                        const newRows = parseInt(
-                                            e.target.value,
-                                            10
-                                        );
-                                        setRows(newRows);
-                                        setPresetArray(
-                                            createDefaultArray(newRows, cols, 0)
-                                        );
-                                        setBgArray(
-                                            createDefaultArray(newRows, cols, 0)
-                                        );
-                                        setOnoffArray(
-                                            createDefaultArray(newRows, cols, 1)
-                                        );
-                                    }}
-                                    className="border rounded px-2 py-1 w-16"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium">
-                                    Cols
-                                </label>
-                                <input
-                                    type="number"
-                                    min={6}
-                                    max={9}
-                                    value={cols}
-                                    onChange={(e) => {
-                                        const newCols = parseInt(
-                                            e.target.value,
-                                            10
-                                        );
-                                        setCols(newCols);
-                                        setPresetArray(
-                                            createDefaultArray(rows, newCols, 0)
-                                        );
-                                        setBgArray(
-                                            createDefaultArray(rows, newCols, 0)
-                                        );
-                                        setOnoffArray(
-                                            createDefaultArray(rows, newCols, 1)
-                                        );
-                                    }}
-                                    className="border rounded px-2 py-1 w-16"
-                                />
-                            </div>
+            <label className="block text-sm font-medium">{label}</label>
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="border rounded px-2 py-1 w-20"
+            />
+        </>
+    );
+
+    return (
+        <div className="flex w-full min-h-screen overflow-auto">
+            <div id="main_board" className="flex-1 mr-[300px]">
+                <div>
+                    <div id="main_board_top" className="flex p-4 space-x-4">
+                        <div className="w-1/3">
+                            <>
+                                <div className="flex gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-medium">
+                                            Rows
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={6}
+                                            max={9}
+                                            value={rows}
+                                            onChange={(e) => {
+                                                const newRows = parseInt(
+                                                    e.target.value,
+                                                    10
+                                                );
+                                                setRows(newRows);
+                                                setPresetArray(
+                                                    createDefaultArray(
+                                                        newRows,
+                                                        cols,
+                                                        0
+                                                    )
+                                                );
+                                                setBgArray(
+                                                    createDefaultArray(
+                                                        newRows,
+                                                        cols,
+                                                        0
+                                                    )
+                                                );
+                                                setOnoffArray(
+                                                    createDefaultArray(
+                                                        newRows,
+                                                        cols,
+                                                        1
+                                                    )
+                                                );
+                                            }}
+                                            className="border rounded px-2 py-1 w-16"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium">
+                                            Cols
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min={6}
+                                            max={9}
+                                            value={cols}
+                                            onChange={(e) => {
+                                                const newCols = parseInt(
+                                                    e.target.value,
+                                                    10
+                                                );
+                                                setCols(newCols);
+                                                setPresetArray(
+                                                    createDefaultArray(
+                                                        rows,
+                                                        newCols,
+                                                        0
+                                                    )
+                                                );
+                                                setBgArray(
+                                                    createDefaultArray(
+                                                        rows,
+                                                        newCols,
+                                                        0
+                                                    )
+                                                );
+                                                setOnoffArray(
+                                                    createDefaultArray(
+                                                        rows,
+                                                        newCols,
+                                                        1
+                                                    )
+                                                );
+                                            }}
+                                            className="border rounded px-2 py-1 w-16"
+                                        />
+                                    </div>
+                                </div>
+
+                                {renderToolbars()}
+
+                                <div className="mt-0 px-5 space-y-1 text-sm">
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            flexWrap: "nowrap",
+                                            alignContent: "center",
+                                            alignItems: "center",
+                                            gap: "20px",
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexWrap: "nowrap",
+                                                alignContent: "center",
+                                                alignItems: "center",
+                                                fontWeight: "bold",
+                                                gap: "3px",
+                                            }}
+                                        >
+                                            <img
+                                                src={`${
+                                                    import.meta.env.BASE_URL
+                                                }assets/bg_3.png`}
+                                                style={{
+                                                    width: "36px",
+                                                    display: "inline-block",
+                                                }}
+                                            />{" "}
+                                            : {totalPresent}
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexWrap: "nowrap",
+                                                alignContent: "center",
+                                                alignItems: "center",
+                                                fontWeight: "bold",
+                                                gap: "3px",
+                                            }}
+                                        >
+                                            <img
+                                                src={`${
+                                                    import.meta.env.BASE_URL
+                                                }assets/bg_2.png`}
+                                                style={{
+                                                    width: "36px",
+                                                    display: "inline-block",
+                                                }}
+                                            />{" "}
+                                            : {totalBalloon}
+                                        </div>
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexWrap: "nowrap",
+                                                alignContent: "center",
+                                                alignItems: "center",
+                                                fontWeight: "bold",
+                                                gap: "3px",
+                                            }}
+                                        >
+                                            <img
+                                                src={`${
+                                                    import.meta.env.BASE_URL
+                                                }assets/preset_11.png`}
+                                                style={{
+                                                    width: "36px",
+                                                    display: "inline-block",
+                                                }}
+                                            />{" "}
+                                            : {totalTrain}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
                         </div>
 
-                        {renderToolbars()}
-                    </>
-                </div>
+                        <div className="flex-1">
+                            <div
+                                className="grid gap-1"
+                                style={{
+                                    gridTemplateColumns: `repeat(${cols}, 40px)`,
+                                }}
+                            >
+                                {[...Array(rows)].flatMap((_, r) =>
+                                    [...Array(cols)].map((_, c) => {
+                                        const i = index(r, c);
+                                        const onoff = onoffArray[i];
+                                        const bg = bgArray[i];
+                                        const preset = presetArray[i];
 
-                <div className="flex-1">
-                    <div
-                        className="grid gap-1"
-                        style={{ gridTemplateColumns: `repeat(${cols}, 40px)` }}
-                    >
-                        {[...Array(rows)].flatMap((_, r) =>
-                            [...Array(cols)].map((_, c) => {
-                                const i = index(r, c);
-                                const onoff = onoffArray[i];
-                                const bg = bgArray[i];
-                                const preset = presetArray[i];
-
-                                return (
-                                    <div
-                                        key={`${r}-${c}`}
-                                        className={`
+                                        return (
+                                            <div
+                                                key={`${r}-${c}`}
+                                                className={`
                     w-10 h-10 border text-xs flex flex-col items-center justify-center cursor-pointer
                     ${onoff ? "bg-gray-300" : "bg-white"}
                     cell-${onoff ? "on" : "off"}
                     background-${bg}
                   `}
-                                        onClick={() => updateGrid(r, c)}
-                                        onDrop={(e) => handleDrop(r, c, e)}
-                                        onDragOver={handleDragOver}
+                                                onClick={() => updateGrid(r, c)}
+                                                onDrop={(e) =>
+                                                    handleDrop(r, c, e)
+                                                }
+                                                onDragOver={handleDragOver}
+                                            >
+                                                <div className="cell-content">
+                                                    {bg !== 0 && (
+                                                        <img
+                                                            src={`${
+                                                                import.meta.env
+                                                                    .BASE_URL
+                                                            }assets/bg_${bg}.png`}
+                                                            className="bg-icon"
+                                                        />
+                                                    )}
+                                                    {!!onoff && bg !== 4 && (
+                                                        <img
+                                                            src={`${
+                                                                import.meta.env
+                                                                    .BASE_URL
+                                                            }assets/preset_${preset}.png`}
+                                                            className="preset-icon"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div id="json_settings" className="flex px-4 space-x-4">
+                        <div className="w-1/3">
+                            {renderTextarea("preset", presetArray, "preset")}
+                        </div>
+                        <div className="w-1/3">
+                            {renderTextarea("bg", bgArray, "bg")}
+                        </div>
+                        <div className="w-1/3">
+                            {renderTextarea(
+                                "boardAvailable",
+                                onoffArray,
+                                "onoff"
+                            )}
+                        </div>
+                    </div>
+                    <div
+                        id="stage_settings"
+                        className="mt-0 px-5 space-y-1 text-sm"
+                    >
+                        <div>
+                            <div
+                                style={{
+                                    display: "flex",
+                                    flexWrap: "nowrap",
+                                    alignContent: "center",
+                                    alignItems: "center",
+                                    gap: "20px",
+                                }}
+                            >
+                                <div>
+                                    {textInput(
+                                        "Preset Slug",
+                                        presetSlug,
+                                        setPresetSlug
+                                    )}
+                                </div>
+                                <div>
+                                    {textInput(
+                                        "Stage #",
+                                        stageNum,
+                                        setStageNum
+                                    )}
+                                </div>
+                                <div>{textInput("Moves", move, setMove)}</div>
+                                <div>
+                                    <label className="block text-sm font-medium">
+                                        Difficulty
+                                    </label>
+                                    <select
+                                        value={difficulty}
+                                        onChange={(e) =>
+                                            setDifficulty(e.target.value)
+                                        }
                                     >
-                                        <div className="cell-content">
-                                            {bg !== 0 && (
-                                                <img
-                                                    src={`${
-                                                        import.meta.env.BASE_URL
-                                                    }assets/bg_${bg}.png`}
-                                                    className="bg-icon"
-                                                />
-                                            )}
-                                            {!!onoff && bg !== 4 && (
-                                                <img
-                                                    src={`${
-                                                        import.meta.env.BASE_URL
-                                                    }assets/preset_${preset}.png`}
-                                                    className="preset-icon"
-                                                />
-                                            )}
-                                        </div>
+                                        <option value="Tutorial">
+                                            Tutorial
+                                        </option>
+                                        <option value="Easy">Easy</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Hard">Hard</option>
+                                    </select>
+                                </div>
+                                <div>{downloadPresetCSVButton()}</div>
+                                <div>{downloadStageCSVButton()}</div>
+                                <div>{createNewPresetButton()}</div>
+                                <div>{savePreset()}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div className="mt-4">
+                                <label className="block font-bold mb-2">
+                                    Requirements (max 3)
+                                </label>
+                                {[1, 2, 3].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="flex gap-2 mb-2 items-center"
+                                    >
+                                        <select
+                                            className="border px-2 py-1 rounded"
+                                            value={
+                                                i === 1
+                                                    ? requirementType1
+                                                    : i === 2
+                                                    ? requirementType2
+                                                    : requirementType3
+                                            }
+                                            onChange={(e) =>
+                                                i === 1
+                                                    ? setRequirementType1(
+                                                          e.target.value
+                                                      )
+                                                    : i === 2
+                                                    ? setRequirementType2(
+                                                          e.target.value
+                                                      )
+                                                    : setRequirementType3(
+                                                          e.target.value
+                                                      )
+                                            }
+                                        >
+                                            <option value="">
+                                                -- Select Type --
+                                            </option>
+                                            <option value="blue">Blue</option>
+                                            <option value="red">Red</option>
+                                            <option value="green">Green</option>
+                                            <option value="yellow">
+                                                Yellow
+                                            </option>
+                                            <option value="purple">
+                                                Purple
+                                            </option>
+                                            <option value="gift">Gift</option>
+                                            <option value="balloon">
+                                                Balloon
+                                            </option>
+                                            <option value="smile">Smile</option>
+                                            <option value="coin">Coin</option>
+                                            <option value="star">Star</option>
+                                        </select>
+                                        <input
+                                            type="number"
+                                            className="border px-2 py-1 rounded w-24"
+                                            placeholder="Amount"
+                                            value={
+                                                i === 1
+                                                    ? requirementAmount1
+                                                    : i === 2
+                                                    ? requirementAmount2
+                                                    : requirementAmount3
+                                            }
+                                            onChange={(e) =>
+                                                i === 1
+                                                    ? setRequirementAmount1(
+                                                          e.target.value
+                                                      )
+                                                    : i === 2
+                                                    ? setRequirementAmount2(
+                                                          e.target.value
+                                                      )
+                                                    : setRequirementAmount3(
+                                                          e.target.value
+                                                      )
+                                            }
+                                        />
                                     </div>
-                                );
-                            })
-                        )}
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div className="flex px-4 space-x-4">
-                <div className="w-1/3">
-                    {renderTextarea("preset", presetArray, "preset")}
-                </div>
-                <div className="w-1/3">
-                    {renderTextarea("bg", bgArray, "bg")}
-                </div>
-                <div className="w-1/3">
-                    {renderTextarea("boardAvailable", onoffArray, "onoff")}
-                </div>
-            </div>
-            <div className="mt-0 px-5 space-y-1 text-sm">
-                <div
-                    style={{
-                        display: "flex",
-                        flexWrap: "nowrap",
-                        alignContent: "center",
-                        alignItems: "center",
-                        gap: "20px",
-                    }}
-                >
-                    <div
-                        style={{
-                            display: "flex",
-                            flexWrap: "nowrap",
-                            alignContent: "center",
-                            alignItems: "center",
-                            fontWeight: "bold",
-                            gap: "3px",
-                        }}
-                    >
-                        <img
-                            src={`${import.meta.env.BASE_URL}assets/bg_3.png`}
-                            style={{ width: "36px", display: "inline-block" }}
-                        />{" "}
-                        : {totalPresent}
-                    </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexWrap: "nowrap",
-                            alignContent: "center",
-                            alignItems: "center",
-                            fontWeight: "bold",
-                            gap: "3px",
-                        }}
-                    >
-                        <img
-                            src={`${import.meta.env.BASE_URL}assets/bg_2.png`}
-                            style={{ width: "36px", display: "inline-block" }}
-                        />{" "}
-                        : {totalBalloon}
-                    </div>
-                </div>
-            </div>
-        </>
+            <Sidebar
+                savedStages={savedStages}
+                stageNum={stageNum}
+                loadStage={loadStage}
+                deleteStage={deleteStage}
+                currentStageID={currentStageID}
+            />
+        </div>
     );
 }
