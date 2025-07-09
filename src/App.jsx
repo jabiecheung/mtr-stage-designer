@@ -1,26 +1,24 @@
 import React, { useState, useEffect } from "react";
-import Sidebar from "./Sidebar";
+import Sidebar from "./components/SideBar";
+import JsonSettings from "./components/JsonSettings";
+import StageSettings from "./components/StageSettings";
 
 const DEFAULT_ROWS = 8;
 const DEFAULT_COLS = 8;
 
 const createDefaultArray = (rows, cols, defaultValue) =>
     Array(rows * cols).fill(defaultValue);
+    
+const getStoredData = () => {
+    const raw = localStorage.getItem("stageEditorData");
+    return raw ? JSON.parse(raw) : {};
+};
 
-export default function StageEditor() {
-    const getStoredData = () => {
-        const raw = localStorage.getItem("stageEditorData");
-        return raw ? JSON.parse(raw) : {};
-    };
-
-    const stored = getStoredData();
-
+export default function App() {
     const [selectedTool, setSelectedTool] = useState("preset");
     const [selectedValue, setSelectedValue] = useState(0);
-    const [copiedType, setCopiedType] = useState(null);
-
+    const [stored] = useState(getStoredData);
     const [currentStageID, setCurrentStageID] = useState(null);
-
     const [nextStageID, setNextStageID] = useState(() => {
         const raw = localStorage.getItem("savedStages");
         const stages = raw ? JSON.parse(raw) : [];
@@ -333,46 +331,6 @@ export default function StageEditor() {
 
     const handleDragOver = (e) => e.preventDefault();
 
-    const handleTextareaChange = (type, json) => {
-        try {
-            const parsed = JSON.parse(json);
-            if (!Array.isArray(parsed) || parsed.length !== rows * cols) return;
-            if (type === "preset") setPresetArray(parsed);
-            if (type === "bg") setBgArray(parsed);
-            if (type === "onoff") setOnoffArray(parsed);
-        } catch (e) {
-            console.error("Invalid JSON", e);
-            alert("Invalid JSON");
-        }
-    };
-
-    const renderTextarea = (label, data, type) => (
-        <div className="w-full mb-4 relative">
-            <label className="block font-bold mb-1">{label}</label>
-            <button
-                onClick={() => {
-                    navigator.clipboard.writeText(
-                        `[\n${Array.from({ length: rows }, (_, r) =>
-                            data.slice(r * cols, (r + 1) * cols).join(", ")
-                        ).join(",\n")}\n]`
-                    );
-                    setCopiedType(type);
-                    setTimeout(() => setCopiedType(null), 3000);
-                }}
-                className="absolute top-0 right-0 text-md bg-gray-200 border border-gray-300 px-5 py-1 rounded hover:bg-gray-300"
-            >
-                {copiedType === type ? "Copied" : "Copy"}
-            </button>
-            <textarea
-                className="w-full h-48 border p-2 rounded text-sm"
-                value={`[\n${Array.from({ length: rows }, (_, r) =>
-                    data.slice(r * cols, (r + 1) * cols).join(", ")
-                ).join(",\n")}\n]`}
-                onChange={(e) => handleTextareaChange(type, e.target.value)}
-            />
-        </div>
-    );
-
     const handleDownloadPresetCSV = () => {
         const headers = [
             "sourceGameStagePresetSlug",
@@ -397,16 +355,6 @@ export default function StageEditor() {
         [...savedStages]
             .sort((a, b) => a.id - b.id)
             .forEach((stage) => {
-                const totalPresent = stage.bgArray.filter(
-                    (v) => v === 3
-                ).length;
-                const totalBalloon = stage.bgArray.filter(
-                    (v) => v === 1 || v === 2
-                ).length;
-                const totalTrain = stage.presetArray.filter(
-                    (v) => v === 11
-                ).length;
-
                 const reqType1 = stage.requirementType1 ?? "";
                 const reqAmt1 = stage.requirementAmount1 ?? "";
                 const reqType2 = stage.requirementType2 ?? "";
@@ -456,18 +404,10 @@ export default function StageEditor() {
         document.body.removeChild(link);
     };
 
-    const downloadPresetCSVButton = () => (
-        <button
-            onClick={handleDownloadPresetCSV}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-        >
-            Download Preset CSV
-        </button>
-    );
-
     const handleDownloadStageCSV = () => {
         const headers = [
             "stageNum",
+            "gameStagePresetSlugPrefix",
             "gameStagePresetSlug",
             "slug",
             "titleZh",
@@ -483,6 +423,7 @@ export default function StageEditor() {
             .forEach((stage) => {
                 rowsList.push([
                     stage.stageNum,
+                    null,
                     stage.presetSlug,
                     stage.presetSlug,
                     null,
@@ -509,35 +450,6 @@ export default function StageEditor() {
         link.click();
         document.body.removeChild(link);
     };
-
-    const downloadStageCSVButton = () => (
-        <button
-            onClick={handleDownloadStageCSV}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-        >
-            Download Stage CSV
-        </button>
-    );
-
-    // updatePreset
-
-    const savePreset = () => (
-        <button
-            onClick={saveStageToStorage}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-        >
-            Save Preset
-        </button>
-    );
-
-    const createNewPresetButton = () => (
-        <button
-            onClick={createNewPreset}
-            className="mt-4 px-4 py-2 bg-green-500 text-white rounded"
-        >
-            Create New Preset
-        </button>
-    );
 
     const presetIcon = (i) => {
         return (
@@ -639,18 +551,6 @@ export default function StageEditor() {
                 ))}
             </div>
         </div>
-    );
-
-    const textInput = (label, value, onChange) => (
-        <>
-            <label className="block text-sm font-medium">{label}</label>
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="border rounded px-2 py-1 w-20"
-            />
-        </>
     );
 
     return (
@@ -879,162 +779,48 @@ export default function StageEditor() {
                             </div>
                         </div>
                     </div>
-                    <div id="json_settings" className="flex px-4 space-x-4">
-                        <div className="w-1/3">
-                            {renderTextarea("preset", presetArray, "preset")}
-                        </div>
-                        <div className="w-1/3">
-                            {renderTextarea("bg", bgArray, "bg")}
-                        </div>
-                        <div className="w-1/3">
-                            {renderTextarea(
-                                "boardAvailable",
-                                onoffArray,
-                                "onoff"
-                            )}
-                        </div>
-                    </div>
-                    <div
-                        id="stage_settings"
-                        className="mt-0 px-5 space-y-1 text-sm"
-                    >
-                        <div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    flexWrap: "nowrap",
-                                    alignContent: "center",
-                                    alignItems: "center",
-                                    gap: "20px",
-                                }}
-                            >
-                                <div>
-                                    {textInput(
-                                        "Preset Slug",
-                                        presetSlug,
-                                        setPresetSlug
-                                    )}
-                                </div>
-                                <div>
-                                    {textInput(
-                                        "Stage #",
-                                        stageNum,
-                                        setStageNum
-                                    )}
-                                </div>
-                                <div>{textInput("Moves", move, setMove)}</div>
-                                <div>
-                                    <label className="block text-sm font-medium">
-                                        Difficulty
-                                    </label>
-                                    <select
-                                        value={difficulty}
-                                        onChange={(e) =>
-                                            setDifficulty(e.target.value)
-                                        }
-                                    >
-                                        <option value="Tutorial">
-                                            Tutorial
-                                        </option>
-                                        <option value="Easy">Easy</option>
-                                        <option value="Medium">Medium</option>
-                                        <option value="Hard">Hard</option>
-                                    </select>
-                                </div>
-                                <div>{downloadPresetCSVButton()}</div>
-                                <div>{downloadStageCSVButton()}</div>
-                                <div>{createNewPresetButton()}</div>
-                                <div>{savePreset()}</div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="mt-4">
-                                <label className="block font-bold mb-2">
-                                    Requirements (max 3)
-                                </label>
-                                {[1, 2, 3].map((i) => (
-                                    <div
-                                        key={i}
-                                        className="flex gap-2 mb-2 items-center"
-                                    >
-                                        <select
-                                            className="border px-2 py-1 rounded"
-                                            value={
-                                                i === 1
-                                                    ? requirementType1
-                                                    : i === 2
-                                                    ? requirementType2
-                                                    : requirementType3
-                                            }
-                                            onChange={(e) =>
-                                                i === 1
-                                                    ? setRequirementType1(
-                                                          e.target.value
-                                                      )
-                                                    : i === 2
-                                                    ? setRequirementType2(
-                                                          e.target.value
-                                                      )
-                                                    : setRequirementType3(
-                                                          e.target.value
-                                                      )
-                                            }
-                                        >
-                                            <option value="">
-                                                -- Select Type --
-                                            </option>
-                                            <option value="blue">Blue</option>
-                                            <option value="red">Red</option>
-                                            <option value="green">Green</option>
-                                            <option value="yellow">
-                                                Yellow
-                                            </option>
-                                            <option value="purple">
-                                                Purple
-                                            </option>
-                                            <option value="gift">Gift</option>
-                                            <option value="balloon">
-                                                Balloon
-                                            </option>
-                                            <option value="smile">Smile</option>
-                                            <option value="coin">Coin</option>
-                                            <option value="star">Star</option>
-                                        </select>
-                                        <input
-                                            type="number"
-                                            className="border px-2 py-1 rounded w-24"
-                                            placeholder="Amount"
-                                            value={
-                                                i === 1
-                                                    ? requirementAmount1
-                                                    : i === 2
-                                                    ? requirementAmount2
-                                                    : requirementAmount3
-                                            }
-                                            onChange={(e) =>
-                                                i === 1
-                                                    ? setRequirementAmount1(
-                                                          e.target.value
-                                                      )
-                                                    : i === 2
-                                                    ? setRequirementAmount2(
-                                                          e.target.value
-                                                      )
-                                                    : setRequirementAmount3(
-                                                          e.target.value
-                                                      )
-                                            }
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+
+                    <JsonSettings
+                        rows={rows}
+                        cols={cols}
+                        presetArray={presetArray}
+                        bgArray={bgArray}
+                        onoffArray={onoffArray}
+                        setPresetArray={setPresetArray}
+                        setBgArray={setBgArray}
+                        setOnoffArray={setOnoffArray}
+                    />
+
+                    <StageSettings
+                        presetSlug={presetSlug}
+                        setPresetSlug={setPresetSlug}
+                        stageNum={stageNum}
+                        setStageNum={setStageNum}
+                        move={move}
+                        setMove={setMove}
+                        difficulty={difficulty}
+                        setDifficulty={setDifficulty}
+                        requirementType1={requirementType1}
+                        setRequirementType1={setRequirementType1}
+                        requirementAmount1={requirementAmount1}
+                        setRequirementAmount1={setRequirementAmount1}
+                        requirementType2={requirementType2}
+                        setRequirementType2={setRequirementType2}
+                        requirementAmount2={requirementAmount2}
+                        setRequirementAmount2={setRequirementAmount2}
+                        requirementType3={requirementType3}
+                        setRequirementType3={setRequirementType3}
+                        requirementAmount3={requirementAmount3}
+                        setRequirementAmount3={setRequirementAmount3}
+                        handleDownloadPresetCSV={handleDownloadPresetCSV}
+                        handleDownloadStageCSV={handleDownloadStageCSV}
+                        createNewPreset={createNewPreset}
+                        saveStageToStorage={saveStageToStorage}
+                    />
                 </div>
             </div>
             <Sidebar
                 savedStages={savedStages}
-                stageNum={stageNum}
                 loadStage={loadStage}
                 deleteStage={deleteStage}
                 currentStageID={currentStageID}
