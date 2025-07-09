@@ -2,13 +2,15 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./components/SideBar";
 import JsonSettings from "./components/JsonSettings";
 import StageSettings from "./components/StageSettings";
+import Board from "./components/Board";
+import ToolBox from "./components/ToolBox";
 
 const DEFAULT_ROWS = 8;
 const DEFAULT_COLS = 8;
 
 const createDefaultArray = (rows, cols, defaultValue) =>
     Array(rows * cols).fill(defaultValue);
-    
+
 const getStoredData = () => {
     const raw = localStorage.getItem("stageEditorData");
     return raw ? JSON.parse(raw) : {};
@@ -31,39 +33,39 @@ export default function App() {
         return raw ? JSON.parse(raw) : [];
     });
 
-    const saveStageToStorage = () => {
-        const editorState = {
-            id: currentStageID,
-            rows,
-            cols,
-            presetArray,
-            bgArray,
-            onoffArray,
-            presetSlug,
-            stageNum,
-            difficulty,
-            move,
-            requirementType1,
-            requirementAmount1,
-            requirementType2,
-            requirementAmount2,
-            requirementType3,
-            requirementAmount3,
-        };
+    // const saveStageToStorage = () => {
+    //     const editorState = {
+    //         id: currentStageID,
+    //         rows,
+    //         cols,
+    //         presetArray,
+    //         bgArray,
+    //         onoffArray,
+    //         presetSlug,
+    //         stageNum,
+    //         difficulty,
+    //         move,
+    //         requirementType1,
+    //         requirementAmount1,
+    //         requirementType2,
+    //         requirementAmount2,
+    //         requirementType3,
+    //         requirementAmount3,
+    //     };
 
-        if (!presetSlug || !stageNum) {
-            alert("Please enter the slug and stage #");
-            return;
-        }
+    //     if (!presetSlug || !stageNum) {
+    //         alert("Please enter the slug and stage #");
+    //         return;
+    //     }
 
-        const existing = JSON.parse(
-            localStorage.getItem("savedStages") || "[]"
-        );
-        const updated = existing.filter((s) => s.id !== currentStageID);
-        updated.push(editorState);
-        localStorage.setItem("savedStages", JSON.stringify(updated));
-        setSavedStages(updated);
-    };
+    //     const existing = JSON.parse(
+    //         localStorage.getItem("savedStages") || "[]"
+    //     );
+    //     const updated = existing.filter((s) => s.id !== currentStageID);
+    //     updated.push(editorState);
+    //     localStorage.setItem("savedStages", JSON.stringify(updated));
+    //     setSavedStages(updated);
+    // };
 
     const createNewPreset = () => {
         setRows(DEFAULT_ROWS);
@@ -283,54 +285,6 @@ export default function App() {
         updateOrClearReq("smile", totalTrain);
     }, [totalPresent, totalBalloon, totalTrain]);
 
-    const index = (r, c) => (rows - 1 - r) * cols + c;
-
-    const updateGrid = (r, c) => {
-        const i = index(r, c);
-        const val = selectedValue;
-
-        if (selectedTool === "preset") {
-            const copy = [...presetArray];
-            copy[i] = val;
-            setPresetArray(copy);
-        } else if (selectedTool === "bg") {
-            const copy = [...bgArray];
-            copy[i] = val;
-            setBgArray(copy);
-        } else if (selectedTool === "onoff") {
-            const copy = [...onoffArray];
-            copy[i] = val;
-            setOnoffArray(copy);
-        }
-    };
-
-    const handleDragStart = (e) => {
-        e.dataTransfer.setData("type", e.target.dataset.type);
-        e.dataTransfer.setData("value", e.target.dataset.value);
-    };
-
-    const handleDrop = (r, c, e) => {
-        e.preventDefault();
-        const type = e.dataTransfer.getData("type");
-        const value = parseInt(e.dataTransfer.getData("value"));
-        const i = index(r, c);
-        if (type === "preset") {
-            const copy = [...presetArray];
-            copy[i] = value;
-            setPresetArray(copy);
-        } else if (type === "bg") {
-            const copy = [...bgArray];
-            copy[i] = value;
-            setBgArray(copy);
-        } else if (type === "onoff") {
-            const copy = [...onoffArray];
-            copy[i] = value;
-            setOnoffArray(copy);
-        }
-    };
-
-    const handleDragOver = (e) => e.preventDefault();
-
     const handleDownloadPresetCSV = () => {
         const headers = [
             "sourceGameStagePresetSlug",
@@ -451,333 +405,41 @@ export default function App() {
         document.body.removeChild(link);
     };
 
-    const presetIcon = (i) => {
-        return (
-            <div
-                key={`preset-${i}`}
-                className="cursor-pointer"
-                style={{
-                    border:
-                        selectedTool === "preset" && selectedValue === i
-                            ? "2px solid red"
-                            : "1px solid #ccc",
-                }}
-            >
-                <img
-                    src={`${import.meta.env.BASE_URL}assets/preset_${i}.png`}
-                    className="preset-toolbar-icon"
-                    data-type="preset"
-                    data-value={i}
-                    draggable
-                    onDragStart={handleDragStart}
-                    onClick={() => {
-                        setSelectedTool("preset");
-                        setSelectedValue(i);
-                    }}
-                />
-            </div>
-        );
-    };
-
-    const renderToolbars = () => (
-        <div className="space-y-2 mb-4">
-            <div className="font-bold">Presets</div>
-            <div className="flex gap-2 flex-wrap">
-                {[...Array(6)].map((_, i) => presetIcon(i))}
-            </div>
-            <div className="flex gap-2 flex-wrap">
-                {[6, 7, 8, 9, 10, 11].map((i) => presetIcon(i))}
-            </div>
-            <div className="font-bold">Backgrounds</div>
-            <div className="flex gap-2 flex-wrap">
-                {[0, 1, 2, 3, 4].map((i) => (
-                    <div
-                        key={`bg-${i}`}
-                        className="cursor-pointer"
-                        style={{
-                            border:
-                                selectedTool === "bg" && selectedValue === i
-                                    ? "2px solid red"
-                                    : "1px solid #ccc",
-                        }}
-                    >
-                        <img
-                            src={`${
-                                import.meta.env.BASE_URL
-                            }assets/bg_${i}.png`}
-                            className="bg-toolbar-icon"
-                            data-type="bg"
-                            data-value={i}
-                            draggable
-                            onDragStart={handleDragStart}
-                            onClick={() => {
-                                setSelectedTool("bg");
-                                setSelectedValue(i);
-                            }}
-                        />
-                    </div>
-                ))}
-            </div>
-            <div className="font-bold">On/Off</div>
-            <div className="flex gap-2">
-                {[1, 0].map((val) => (
-                    <div
-                        key={`onoff-${val}`}
-                        className="cursor-pointer"
-                        style={{
-                            border:
-                                selectedTool === "onoff" &&
-                                selectedValue === val
-                                    ? "2px solid red"
-                                    : "1px solid #ccc",
-                        }}
-                    >
-                        <div
-                            className={`px-2 py-1 border rounded text-xs ${
-                                val === 1 ? "bg-gray-300" : "bg-white"
-                            }`}
-                            draggable
-                            data-type="onoff"
-                            data-value={val}
-                            onDragStart={handleDragStart}
-                            onClick={() => {
-                                setSelectedTool("onoff");
-                                setSelectedValue(val);
-                            }}
-                        >
-                            {val === 1 ? "On" : "Off"}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-
     return (
         <div className="flex w-full min-h-screen overflow-auto">
             <div id="main_board" className="flex-1 mr-[300px]">
                 <div>
                     <div id="main_board_top" className="flex p-4 space-x-4">
-                        <div className="w-1/3">
-                            <>
-                                <div className="flex gap-4 mb-4">
-                                    <div>
-                                        <label className="block text-sm font-medium">
-                                            Rows
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min={6}
-                                            max={9}
-                                            value={rows}
-                                            onChange={(e) => {
-                                                const newRows = parseInt(
-                                                    e.target.value,
-                                                    10
-                                                );
-                                                setRows(newRows);
-                                                setPresetArray(
-                                                    createDefaultArray(
-                                                        newRows,
-                                                        cols,
-                                                        0
-                                                    )
-                                                );
-                                                setBgArray(
-                                                    createDefaultArray(
-                                                        newRows,
-                                                        cols,
-                                                        0
-                                                    )
-                                                );
-                                                setOnoffArray(
-                                                    createDefaultArray(
-                                                        newRows,
-                                                        cols,
-                                                        1
-                                                    )
-                                                );
-                                            }}
-                                            className="border rounded px-2 py-1 w-16"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium">
-                                            Cols
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min={6}
-                                            max={9}
-                                            value={cols}
-                                            onChange={(e) => {
-                                                const newCols = parseInt(
-                                                    e.target.value,
-                                                    10
-                                                );
-                                                setCols(newCols);
-                                                setPresetArray(
-                                                    createDefaultArray(
-                                                        rows,
-                                                        newCols,
-                                                        0
-                                                    )
-                                                );
-                                                setBgArray(
-                                                    createDefaultArray(
-                                                        rows,
-                                                        newCols,
-                                                        0
-                                                    )
-                                                );
-                                                setOnoffArray(
-                                                    createDefaultArray(
-                                                        rows,
-                                                        newCols,
-                                                        1
-                                                    )
-                                                );
-                                            }}
-                                            className="border rounded px-2 py-1 w-16"
-                                        />
-                                    </div>
-                                </div>
+                        <ToolBox
+                            rows={rows}
+                            cols={cols}
+                            setRows={setRows}
+                            setCols={setCols}
+                            createDefaultArray={createDefaultArray}
+                            setPresetArray={setPresetArray}
+                            setBgArray={setBgArray}
+                            setOnoffArray={setOnoffArray}
+                            selectedTool={selectedTool}
+                            selectedValue={selectedValue}
+                            setSelectedTool={setSelectedTool}
+                            setSelectedValue={setSelectedValue}
+                            totalPresent={totalPresent}
+                            totalBalloon={totalBalloon}
+                            totalTrain={totalTrain}
+                        />
 
-                                {renderToolbars()}
-
-                                <div className="mt-0 px-5 space-y-1 text-sm">
-                                    <div
-                                        style={{
-                                            display: "flex",
-                                            flexWrap: "nowrap",
-                                            alignContent: "center",
-                                            alignItems: "center",
-                                            gap: "20px",
-                                        }}
-                                    >
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                flexWrap: "nowrap",
-                                                alignContent: "center",
-                                                alignItems: "center",
-                                                fontWeight: "bold",
-                                                gap: "3px",
-                                            }}
-                                        >
-                                            <img
-                                                src={`${
-                                                    import.meta.env.BASE_URL
-                                                }assets/bg_3.png`}
-                                                style={{
-                                                    width: "36px",
-                                                    display: "inline-block",
-                                                }}
-                                            />{" "}
-                                            : {totalPresent}
-                                        </div>
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                flexWrap: "nowrap",
-                                                alignContent: "center",
-                                                alignItems: "center",
-                                                fontWeight: "bold",
-                                                gap: "3px",
-                                            }}
-                                        >
-                                            <img
-                                                src={`${
-                                                    import.meta.env.BASE_URL
-                                                }assets/bg_2.png`}
-                                                style={{
-                                                    width: "36px",
-                                                    display: "inline-block",
-                                                }}
-                                            />{" "}
-                                            : {totalBalloon}
-                                        </div>
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                flexWrap: "nowrap",
-                                                alignContent: "center",
-                                                alignItems: "center",
-                                                fontWeight: "bold",
-                                                gap: "3px",
-                                            }}
-                                        >
-                                            <img
-                                                src={`${
-                                                    import.meta.env.BASE_URL
-                                                }assets/preset_11.png`}
-                                                style={{
-                                                    width: "36px",
-                                                    display: "inline-block",
-                                                }}
-                                            />{" "}
-                                            : {totalTrain}
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        </div>
-
-                        <div className="flex-1">
-                            <div
-                                className="grid gap-1"
-                                style={{
-                                    gridTemplateColumns: `repeat(${cols}, 40px)`,
-                                }}
-                            >
-                                {[...Array(rows)].flatMap((_, r) =>
-                                    [...Array(cols)].map((_, c) => {
-                                        const i = index(r, c);
-                                        const onoff = onoffArray[i];
-                                        const bg = bgArray[i];
-                                        const preset = presetArray[i];
-
-                                        return (
-                                            <div
-                                                key={`${r}-${c}`}
-                                                className={`
-                    w-10 h-10 border text-xs flex flex-col items-center justify-center cursor-pointer
-                    ${onoff ? "bg-gray-300" : "bg-white"}
-                    cell-${onoff ? "on" : "off"}
-                    background-${bg}
-                  `}
-                                                onClick={() => updateGrid(r, c)}
-                                                onDrop={(e) =>
-                                                    handleDrop(r, c, e)
-                                                }
-                                                onDragOver={handleDragOver}
-                                            >
-                                                <div className="cell-content">
-                                                    {bg !== 0 && (
-                                                        <img
-                                                            src={`${
-                                                                import.meta.env
-                                                                    .BASE_URL
-                                                            }assets/bg_${bg}.png`}
-                                                            className="bg-icon"
-                                                        />
-                                                    )}
-                                                    {!!onoff && bg !== 4 && (
-                                                        <img
-                                                            src={`${
-                                                                import.meta.env
-                                                                    .BASE_URL
-                                                            }assets/preset_${preset}.png`}
-                                                            className="preset-icon"
-                                                        />
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-                        </div>
+                        <Board
+                            rows={rows}
+                            cols={cols}
+                            onoffArray={onoffArray}
+                            bgArray={bgArray}
+                            presetArray={presetArray}
+                            selectedTool={selectedTool}
+                            selectedValue={selectedValue}
+                            setPresetArray={setPresetArray}
+                            setBgArray={setBgArray}
+                            setOnoffArray={setOnoffArray}
+                        />
                     </div>
 
                     <JsonSettings
@@ -815,7 +477,7 @@ export default function App() {
                         handleDownloadPresetCSV={handleDownloadPresetCSV}
                         handleDownloadStageCSV={handleDownloadStageCSV}
                         createNewPreset={createNewPreset}
-                        saveStageToStorage={saveStageToStorage}
+                        // saveStageToStorage={saveStageToStorage}
                     />
                 </div>
             </div>

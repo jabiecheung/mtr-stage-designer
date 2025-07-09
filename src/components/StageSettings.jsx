@@ -36,7 +36,7 @@ export default function StageSettings({
     handleDownloadPresetCSV,
     handleDownloadStageCSV,
     createNewPreset,
-    saveStageToStorage,
+    // saveStageToStorage,
 }) {
     return (
         <div id="stage_settings" className="mt-0 px-5 space-y-1 text-sm">
@@ -91,14 +91,14 @@ export default function StageSettings({
                             Create New Preset
                         </button>
                     </div>
-                    <div>
+                    {/* <div>
                         <button
                             onClick={saveStageToStorage}
                             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
                         >
                             Save Preset
                         </button>
-                    </div>
+                    </div> */}
                 </div>
             </div>
             <div>
